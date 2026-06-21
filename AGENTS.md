@@ -79,8 +79,6 @@ Diretrizes específicas devem ser definidas em:
 bbrain-api/AGENTS.md
 ```
 
----
-
 # 3. Princípios globais
 
 Toda implementação deve priorizar:
@@ -88,60 +86,39 @@ Toda implementação deve priorizar:
 1. Simplicidade.
 2. Legibilidade.
 3. Manutenibilidade.
-4. Escalabilidade.
-5. Segurança.
-6. Consistência.
+4. Segurança.
+5. Consistência.
 
 Evitar:
 
 * Complexidade desnecessária.
 * Overengineering.
-* Código duplicado.
 * Dependências sem justificativa.
 
----
-
-# 4. Experiência do usuário
-
-Toda decisão deve considerar:
-
-* Facilidade de uso.
-* Baixa carga cognitiva.
-* Navegação intuitiva.
-* Acessibilidade.
-* Responsividade.
-
-O usuário deve conseguir utilizar o sistema sem necessidade de treinamento.
+As diretrizes de design visual e produto detalhadas estão no `DESIGN.md` de cada projeto.
 
 ---
 
-# 5. Inteligência Artificial
+# 4. Arquitetura
 
-A IA deve atuar como facilitadora de reflexão e autoconhecimento.
+Cada projeto deve possuir autonomia técnica.
 
-Ela não substitui:
+Frontend e backend podem evoluir independentemente.
 
-* Psicólogos.
-* Psiquiatras.
-* Profissionais de saúde.
+No backend, domínio, classes, DTOs e casos de uso devem usar `camelCase`. Schemas, documentos, filtros e objetos persistidos no banco devem usar `snake_case`. Toda conversão entre esses padrões deve ficar centralizada em mappers da camada de infraestrutura.
 
-As respostas devem:
+As regras específicas de cada projeto devem permanecer em seus respectivos AGENTS.md.
 
-* Ser acolhedoras.
-* Ser claras.
-* Evitar julgamentos.
-* Incentivar reflexão.
-* Evitar diagnósticos.
+Este documento deve conter apenas diretrizes globais do ecossistema BBrain.
 
 ---
 
-# 6. Privacidade e segurança
+# 5. Privacidade e segurança
 
 Dados do usuário devem ser tratados como informações sensíveis.
 
 Prioridades:
 
-* Menor coleta possível.
 * Transparência.
 * Segurança.
 * Controle pelo usuário.
@@ -150,19 +127,7 @@ Toda funcionalidade deve considerar privacidade desde a concepção.
 
 ---
 
-# 7. Arquitetura
-
-Cada projeto deve possuir autonomia técnica.
-
-Frontend e backend podem evoluir independentemente.
-
-As regras específicas de cada projeto devem permanecer em seus respectivos AGENTS.md.
-
-Este documento deve conter apenas diretrizes globais do ecossistema BBrain.
-
----
-
-# 8. Fonte de verdade
+# 6. Fonte de verdade
 
 Em caso de conflito:
 
