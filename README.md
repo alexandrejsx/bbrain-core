@@ -16,8 +16,8 @@ bbrain-core/
 Após clonar este repositório, clone também os projetos dependentes dentro da raiz:
 
 ```bash
-git clone <url-do-bbrain> bbrain
-git clone <url-do-bbrain-api> bbrain-api
+git clone git@github.com:alexandrejsx/bbrain.git
+git clone git@github.com:alexandrejsx/bbrain-api.git
 ```
 
 Estrutura esperada:

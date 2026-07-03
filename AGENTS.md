@@ -2,143 +2,197 @@
 
 Repositório central do ecossistema BBrain.
 
-Este documento define as diretrizes globais válidas para todos os projetos do ecossistema.
+Este documento define as diretrizes globais de todo o ecossistema BBrain.
 
 ---
 
-# 1. Visão do produto
+# 1) Escopo global
 
-O BBrain é uma plataforma de acompanhamento emocional, autoconhecimento e desenvolvimento pessoal assistida por inteligência artificial.
+O `bbrain-core` é o repositório central/orquestrador do ecossistema BBrain.
 
-O objetivo do produto é ajudar pessoas a:
+Pode conter scripts, automações, documentação e diretrizes globais.
 
-- Entender padrões emocionais.
-- Desenvolver autoconsciência.
-- Criar hábitos saudáveis.
-- Refletir sobre comportamentos e rotinas.
-- Receber insights personalizados.
-- Manter acompanhamento contínuo da própria evolução.
-
-A experiência deve transmitir:
-
-- Clareza.
-- Simplicidade.
-- Acolhimento.
-- Segurança.
-- Confiança.
-- Privacidade.
+Os projetos `bbrain` e `bbrain-api` continuam sendo projetos independentes, com histórico de commits, dependências e AGENTS específicos.
 
 ---
 
-# 2. Estrutura do ecossistema
+# 2) Visão de produto
 
-Este repositório contém múltiplos projetos.
+O BBrain é uma plataforma de acompanhamento emocional, autoconhecimento, rotina e desenvolvimento pessoal assistida por IA.
+
+A experiência deve ser:
+
+- acolhedora
+- clara
+- segura
+- privada
+- moderna
+- humana
+- não clínica
+- não alarmista
+- não infantilizada
+
+O BBrain não deve se posicionar como terapeuta, psicólogo, psiquiatra, médico, ferramenta de diagnóstico ou substituto de acompanhamento profissional.
+
+---
+
+# 3) Estrutura do ecossistema
+
+O repositório central agrupa projetos com responsabilidades distintas.
 
 ## bbrain
 
-Aplicação web principal do produto.
+Responsável por interface, experiência e fluxos de uso:
 
-Responsável por:
+- UI e navegação
+- formulários
+- dashboard
+- chat
+- diário
+- sono
+- humor
+- rotina
+- insights
+- recursos
 
-- Interface do usuário.
-- Experiência de uso.
-- Fluxos de autenticação.
-- Dashboards.
-- Chat.
-- Diário.
-- Sono.
-- Humor.
-- Rotina.
-- Insights.
-- Recursos.
-
-Diretrizes específicas devem ser definidas em:
-
-```txt
-bbrain/AGENTS.md
-````
-
----
+Diretrizes específicas em `bbrain/AGENTS.md`.
 
 ## bbrain-api
 
-Backend principal do produto.
+Responsável por backend e regras de produto:
 
-Responsável por:
+- autenticação
+- regras de negócio
+- persistência
+- integrações externas
+- IA
+- processamento sensível
 
-* APIs.
-* Regras de negócio.
-* Persistência de dados.
-* Integrações externas.
-* Inteligência de aplicação.
-* Processamento de IA.
+Diretrizes específicas em `bbrain-api/AGENTS.md`.
 
-Diretrizes específicas devem ser definidas em:
+---
 
-```txt
-bbrain-api/AGENTS.md
-```
-
-# 3. Princípios globais
+# 4) Princípios globais
 
 Toda implementação deve priorizar:
 
-1. Simplicidade.
-2. Legibilidade.
-3. Manutenibilidade.
-4. Segurança.
-5. Consistência.
+1. Simplicidade
+2. Legibilidade
+3. Manutenibilidade
+4. Segurança
+5. Consistência
 
 Evitar:
 
-* Complexidade desnecessária.
-* Overengineering.
-* Dependências sem justificativa.
-
-As diretrizes de design visual e produto detalhadas estão no `DESIGN.md` de cada projeto.
+- complexidade desnecessária
+- overengineering
+- dependências sem justificativa
 
 ---
 
-# 4. Arquitetura
+# 5) Arquitetura e fronteiras
 
-Cada projeto deve possuir autonomia técnica.
+Cada projeto mantém autonomia técnica e pode evoluir de forma independente.
 
-Frontend e backend podem evoluir independentemente.
+- O frontend deve focar experiência do usuário, apresentação, formulários, navegação, acessibilidade e consumo de APIs.
+- O backend deve ficar com autenticação, regras de negócio, persistência, integrações sensíveis, IA, pagamentos, segurança e controle de acesso.
+- O frontend não deve acessar diretamente provedores de IA, gateways de pagamento, banco de dados ou outros serviços sensíveis.
 
-No backend, domínio, classes, DTOs e casos de uso devem usar `camelCase`. Schemas, documentos, filtros e objetos persistidos no banco devem usar `snake_case`. Toda conversão entre esses padrões deve ficar centralizada em mappers da camada de infraestrutura.
+No backend:
 
-As regras específicas de cada projeto devem permanecer em seus respectivos AGENTS.md.
-
-Este documento deve conter apenas diretrizes globais do ecossistema BBrain.
-
----
-
-# 5. Privacidade e segurança
-
-Dados do usuário devem ser tratados como informações sensíveis.
-
-Prioridades:
-
-* Transparência.
-* Segurança.
-* Controle pelo usuário.
-
-Toda funcionalidade deve considerar privacidade desde a concepção.
+- domínio, entidades, value objects, DTOs e casos de uso em `camelCase`
+- esquemas, documentos, filtros e objetos persistidos em `snake_case`
+- conversões centralizadas em mappers da infraestrutura
+- não espalhar conversão manualmente em controllers, serviços ou casos de uso
 
 ---
 
-# 6. Fonte de verdade
+# 6) i18n global
+
+O ecossistema deve suportar internacionalização desde o início.
+
+Idiomas atuais:
+
+- `pt-BR`
+- `en-US`
+- `es-ES`
+
+Diretrizes:
+
+- textos visíveis não devem ficar soltos em componentes sem controle;
+- adicionar idioma novo deve exigir baixo esforço;
+- idioma preferido deve ficar persistido no perfil;
+- `pt-BR` é fallback padrão;
+- preservar tom acolhedor/seguro/não clínico em todas as línguas;
+- termos sensíveis de saúde mental requerem tradução e revisão cuidadosas;
+- evitar tradução automática para mensagens críticas, de segurança, privacidade, crise ou pagamento.
+
+---
+
+# 7) Segurança e privacidade
+
+Dados emocionais, diário, humor, sono, rotina, perfil, diagnósticos formais informados pelo usuário e preferências pessoais são sensíveis.
+
+A implementação deve priorizar:
+
+- privacidade por padrão
+- menor privilégio
+- não exposição de secrets
+- não exposição de dados sensíveis em logs
+- respostas de erro seguras
+- controle do usuário sobre seus dados
+- separação clara entre dados públicos, privados e sensíveis
+
+---
+
+# 8) IA e limites de escopo
+
+Toda funcionalidade de IA deve respeitar os limites do produto:
+
+- não diagnosticar
+- não prescrever
+- não ajustar medicação
+- não prometer cura
+- não substituir profissionais
+- não fazer interpretações clínicas profundas
+- não incentivar dependência emocional do agente
+- responder apenas no escopo do BBrain
+
+A IA atua como apoio reflexivo, organização emocional e autoconhecimento.
+
+---
+
+# 9) Planos, pagamentos e recursos premium
+
+Podem existir recursos gratuitos e pagos.
+
+Integrações e cobrança devem ficar no backend.
+
+Recursos premium podem incluir, por exemplo:
+
+- análises mais profundas
+- ferramentas avançadas de diário
+- plano de apoio
+- relatórios exportáveis
+- acompanhamento contínuo
+
+Evitar amarrar regras conceituais a provedores específicos no AGENTS global.
+
+---
+
+# 10) Fontes de verdade e hierarquia
+
+1. `bbrain-core/AGENTS.md` define regras globais.
+2. `bbrain/AGENTS.md` define regras específicas de frontend.
+3. `bbrain-api/AGENTS.md` define regras específicas de backend.
+4. `DESIGN.md` define regras de design visual por projeto.
 
 Em caso de conflito:
 
-1. Este AGENTS.md define as diretrizes globais.
-2. O AGENTS.md do projeto define as regras específicas.
-3. Implementações devem respeitar ambos.
+- preservar segurança, privacidade, clareza arquitetural e coerência de produto.
 
-Hierarquia:
+---
 
-bbrain-core (global)
-    - bbrain
-        - AGENTS.md
-    - bbrain-api
-        - AGENTS.md
+# 11) Privacidade e segurança por desenho
+
+Todas as funcionalidades devem considerar privacidade desde o início do desenho, e qualquer implementação deve reforçar transparência, segurança e confiança do usuário.
