@@ -2,9 +2,9 @@
   "name": "bbrain-core",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n WEB,API \"pnpm -C bbrain dev\" \"cd bbrain-api && docker compose up -d && yarn start:local\"",
+    "dev": "concurrently -n WEB,API \"pnpm -C bbrain dev\" \"cd bbrain-api && docker compose up -d && pnpm start:local\"",
     "dev:web": "pnpm -C bbrain dev",
-    "dev:api": "cd bbrain-api && docker compose up -d && yarn start:local",
+    "dev:api": "cd bbrain-api && docker compose up -d && pnpm start:local",
     "docker:up": "cd bbrain-api && docker compose up -d",
     "docker:down": "cd bbrain-api && docker compose down"
   },
