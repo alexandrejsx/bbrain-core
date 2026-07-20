@@ -196,3 +196,46 @@ Em caso de conflito:
 # 11) Privacidade e segurança por desenho
 
 Todas as funcionalidades devem considerar privacidade desde o início do desenho, e qualquer implementação deve reforçar transparência, segurança e confiança do usuário.
+
+---
+
+# 12) IA, Humor, Sono e Insights
+
+Para fluxos de IA e dados de bem-estar, consulte também `docs/ai-architecture/` e mantenha a documentação atualizada quando contratos, prompts, schemas, eventos, privacidade ou retenção mudarem.
+
+- outputs de IA são sugestões não confiáveis até parser, policy e domínio aprovarem;
+- somente backend pode chamar providers ou persistir derivados;
+- fatos de Humor/Sono devem preservar fonte, precisão temporal, revisão e controle do usuário;
+- ausência de dado não é neutralidade, score ou noite de sono;
+- dados de terceiros, hipóteses, desejos, ficção e negação não devem criar fatos pessoais;
+- resumo diário de Humor é derivado e não substitui evento primário;
+- edição, correção e exclusão precisam invalidar derivados relevantes;
+- histórico básico não é premium; Insights premium exige autorização no backend;
+- Recursos/RAG nunca atualizam perfil ou memória pessoal por conta própria.
+
+O fluxo atual possui modo shadow e persistência separados. Não habilite `AI_OBSERVATION_EXTRACTION_PERSIST_ENABLED` sem gates de eval, privacidade, operação e rollback documentados.
+
+---
+
+# 13) Fontes normativas e estado da implementação
+
+`BUSINESS_RULES.md` é a fonte normativa de produto. O código mostra o estado implementado; `README.md` explica operação; documentos em `docs/ai-architecture/` registram decisões e limitações.
+
+Quando houver conflito, preserve limites clínicos, segurança, privacidade e autorização. Não declare como implementado aquilo que esteja somente planejado ou documentado.
+
+---
+
+# 14) Estado de conversa e retenção
+
+O fluxo ativo de conversa não deve ler nem escrever transcrições literais. Para continuidade, use somente `ConversationState` estruturado, minimizado, consentido e com TTL.
+
+- não persistir mensagem do usuário nem resposta do BBrain;
+- não usar `current_context_summary` como substituto de transcrição;
+- não guardar rótulo clínico, diagnóstico, padrão ou Insight no estado efêmero;
+- validar e rejeitar trechos copiados antes do repository;
+- usar HMAC separado por finalidade para idempotência/evidência, com secret fora do código;
+- revogação de memória ou storage sensível deve impedir leitura/escrita e apagar o estado ativo;
+- schema/repository de `conversation_messages` não existem mais e não podem ser reintroduzidos no caminho de chat;
+- uma única conversa nunca autoriza criar padrão longitudinal.
+
+Autorrotulação clínica e exclusividade emocional exigem defesa fora do prompt: o modelo não pode confirmar o rótulo, inventar sintomas nem dizer que ele e o usuário estão “sozinhos nessa”. Impulsividade difícil de controlar somada à falta de apoio humano exige verificação direta de segurança imediata.
