@@ -15,7 +15,11 @@ Usar um aggregate `WellbeingObservation` com três discriminadores (`mood_event`
 
 O aggregate mantém estado corrente, `provenanceHistory`, `revisionHistory` e revisão otimista. O histórico embutido tem limite estrito de 500 entradas; ao atingir o limite a mutação falha e exige migração, sem truncar silenciosamente. Exclusão explícita remove o documento corrente conforme a política de eliminação, em vez de preservar conteúdo sensível indefinidamente num tombstone.
 
-O resumo derivado usa um slot estável por usuário e data local, protegido por índice único parcial. `daily-mood-projector.v2` cria somente com pelo menos dois eventos, limita fontes/descriptores, registra revisões das fontes e atualiza o aggregate existente. Mudança de fonte o marca stale e tenta reconstruí-lo; mesmo diante de falha parcial, o read path não serve uma projeção cujas versões de origem divergiram.
+O resumo derivado usa um slot estável por usuário e data local, protegido por índice único parcial.
+`daily-mood-projector.v2` exige ao menos duas fontes **e** diversidade de sinal emocional ou âncora
+temporal; quantidade isolada não prova cobertura. Ele limita fontes/descritores, registra revisões e
+atualiza o aggregate existente. Mudança de fonte o marca stale e tenta reconstruí-lo; mesmo diante
+de falha parcial, o read path não serve projeção cujas versões de origem divergiram.
 
 A idempotência de extração reserva um slot por conversa, mensagem fonte, tipo e fingerprint HMAC da evidência validada. A citação literal não é persistida. Entrada manual usa `clientRequestId`; reutilizar o mesmo id com payload diferente é conflito.
 
@@ -32,8 +36,13 @@ A idempotência de extração reserva um slot por conversa, mensagem fonte, tipo
 - A listagem atual tem cap de 500; paginação e consulta por janela temporal precisam anteceder escala.
 - O limite de 500 revisões é um gatilho explícito para migrar a história a storage append-only.
 - A projeção e a invalidação não são transacionais entre vários documentos; estabilidade do slot, idempotência, stale e validação no read path reduzem, mas não eliminam, a janela de falha.
-- A fronteira foi verificada com doubles/unit tests; falta teste de integração contra Mongo real e migração/preflight operacional.
+- Houve prova manual local de índices/unique/TTL para observations; a suíte final de repository,
+  migration ledger e preflight do ambiente alvo continuam pendentes no relatório operacional.
 
 ## Rollback e evolução
 
-Desligar `AI_OBSERVATION_EXTRACTION_ENABLED` interrompe writes automáticos sem afetar o chat nem os registros já criados. Endpoints/readers podem ser retirados do rollout mantendo a coleção aditiva. Uma migração futura pode copiar `revision_history` para coleção append-only, validar checksum/contagem e somente depois reduzir o documento corrente; nenhuma remoção ocorre no mesmo deploy da cópia.
+Publicar `AI_OBSERVATION_EXTRACTION_PERSIST_ENABLED=false` interrompe novos writes automáticos sem
+afetar chat nem registros existentes; desligar também execução interrompe provider/telemetria. Como
+a aplicação usa configuração de infraestrutura no startup. Endpoints/readers podem ser
+retirados mantendo a coleção aditiva. Uma migração futura pode copiar `revision_history` para coleção
+append-only, validar checksum/contagem e somente depois reduzir o documento corrente.

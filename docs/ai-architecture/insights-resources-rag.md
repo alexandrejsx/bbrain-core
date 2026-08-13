@@ -69,7 +69,7 @@ Confiança não é probabilidade clínica. É uma faixa sobre suporte observacio
 ```text
 JWT/ownership
  -> effective plan/entitlement no backend
- -> feature flag
+ -> controle de acesso do produto
  -> privacy settings/consentimento
  -> evidence validity
  -> retornar Insight validado ou estado seguro
@@ -216,7 +216,7 @@ interface EditorialArtifact {
 ## Pipeline de ingestion
 
 ```text
-allowlist de fonte
+lista restrita de fontes
  -> fetch/import administrado
  -> checksum e malware/type validation
  -> extração preservando estrutura
@@ -322,4 +322,4 @@ Perguntas de risco imediato seguem a policy de segurança e orientação a apoio
 - Embeddings e chunks mantêm parser/chunker/embedding version.
 - Insight generation é desligável por flag sem apagar histórico básico.
 - Insight stale nunca é servido durante rollback.
-- Nenhum rollout remove campos/coleções antigas antes de leitura de compatibilidade e reconciliação.
+- Nenhuma mudança remove campos/coleções antigas antes de leitura de compatibilidade e reconciliação.

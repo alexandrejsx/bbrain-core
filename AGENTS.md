@@ -48,7 +48,6 @@ Responsável por interface, experiência e fluxos de uso:
 - formulários
 - dashboard
 - chat
-- diário
 - sono
 - humor
 - rotina
@@ -131,7 +130,7 @@ Diretrizes:
 
 # 7) Segurança e privacidade
 
-Dados emocionais, diário, humor, sono, rotina, perfil, diagnósticos formais informados pelo usuário e preferências pessoais são sensíveis.
+Dados emocionais, humor, sono, rotina, perfil, diagnósticos formais informados pelo usuário e preferências pessoais são sensíveis.
 
 A implementação deve priorizar:
 
@@ -171,7 +170,6 @@ Integrações e cobrança devem ficar no backend.
 Recursos premium podem incluir, por exemplo:
 
 - análises mais profundas
-- ferramentas avançadas de diário
 - plano de apoio
 - relatórios exportáveis
 - acompanhamento contínuo
@@ -213,7 +211,7 @@ Para fluxos de IA e dados de bem-estar, consulte também `docs/ai-architecture/`
 - histórico básico não é premium; Insights premium exige autorização no backend;
 - Recursos/RAG nunca atualizam perfil ou memória pessoal por conta própria.
 
-O fluxo atual possui modo shadow e persistência separados. Não habilite `AI_OBSERVATION_EXTRACTION_PERSIST_ENABLED` sem gates de eval, privacidade, operação e rollback documentados.
+A extração automática faz parte do fluxo normal quando há consentimento válido. Parser, policy de domínio, ownership e proveniência continuam obrigatórios antes de qualquer persistência.
 
 ---
 

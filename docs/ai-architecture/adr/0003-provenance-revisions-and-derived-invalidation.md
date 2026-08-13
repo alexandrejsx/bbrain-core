@@ -1,6 +1,6 @@
 # ADR-0003 — Proveniência, revisões e invalidação de derivados
 
-- Status: Aceita, com persistência concretizada pelo ADR-0006
+- Status: Aceita, com persistência concretizada pelo ADR-0006 e minimização refinada pelo ADR-0007
 - Data: 2026-07-20
 - Escopo: Humor, Sono, memória e Insights
 
@@ -10,11 +10,20 @@ Um fato pessoal extraído de conversa é uma interpretação sujeita a ambiguida
 
 ## Decisão
 
-Todo `MoodEvent`, `SleepRecord` ou `SleepPeriodStatement` derivado de IA referencia evidência imutável por `EvidenceRef`, incluindo identificadores, role, intervalo de caracteres quando disponível e hash. Somente mensagem do usuário pode sustentar fato pessoal; texto do assistente, conteúdo recuperado e instruções do sistema não podem.
+Todo `MoodEvent`, `SleepRecord` ou `SleepPeriodStatement` derivado de IA referencia evidência por
+identificadores e fingerprint HMAC de finalidade, conforme o ADR-0007. Intervalo de caracteres,
+quote e hash simples não são persistidos pelo slice. Somente a mensagem atual do usuário pode
+sustentar fato pessoal; texto do assistente, conteúdo recuperado e instruções do sistema não podem.
 
-Criação, edição, correção e exclusão usam revisão otimista. Correção não apaga a história: cria `RecordRevision`; exclusão aplica tombstone e respeita o fluxo de eliminação de dados. O valor atual é uma visão materializada das revisões ativas. Alteração manual do usuário tem precedência sobre reextração automática.
+Criação, edição e correção usam revisão otimista. Correção mantém `RecordRevision`; a exclusão
+aplicada pelo ADR-0006 remove o documento corrente em vez de manter tombstone com conteúdo sensível.
+Alteração manual do usuário tem precedência sobre reextração automática.
 
-Resumo diário de humor e Insights são derivados. Eles armazenam referências e versões dos inputs. Qualquer input editado, excluído ou substituído os marca `stale` antes de nova leitura; rebuild idempotente produz uma nova versão. Ausência ou cobertura insuficiente gera `insufficient_data`, nunca um valor neutro inventado.
+Resumo diário de humor e Insights são derivados. Eles armazenam referências e versões dos inputs.
+Qualquer input editado, excluído ou substituído os marca `stale` antes de nova leitura; rebuild
+idempotente produz uma nova versão. No projetor atual, quantidade de eventos isolada não constitui
+cobertura: são exigidas múltiplas fontes e diversidade semântica/temporal. Ausência ou cobertura
+insuficiente gera `insufficient_data`, nunca um valor neutro inventado.
 
 Reprocessamento por novo extractor/schema cria uma proposta ou revisão comparável; não substitui silenciosamente um registro confirmado pelo usuário. A composição concreta da idempotency key e o storage de revisões são refinados no [ADR-0006](./0006-unified-wellbeing-observations-and-stable-projection.md).
 
@@ -30,7 +39,8 @@ Reprocessamento por novo extractor/schema cria uma proposta ou revisão compará
 - Usuário pode entender, corrigir e excluir a origem de uma interpretação.
 - Projeções não continuam aparentando validade após mudança de evidência.
 - Persistência precisa de índices, concorrência otimista, lineage e jobs idempotentes.
-- Tombstones e trilha de auditoria devem obedecer retenção e direito de eliminação; não podem virar arquivo eterno de conteúdo sensível.
+- O slice atual usa hard-delete. Uma futura trilha/tombstone somente de metadados, sem valor
+  sensível, deverá obedecer retenção e direito de eliminação; não pode virar arquivo eterno.
 
 ## Gates e rollback
 

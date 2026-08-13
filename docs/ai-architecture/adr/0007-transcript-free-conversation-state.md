@@ -19,13 +19,13 @@ mensagem atual em memória
  -> privacy policy
  -> ConversationState ativo e estruturado, se permitido
  -> claim por HMAC sem conteúdo
- -> provider com store:false
+ -> OpenAI com store:false; Gemini sob contrato/policy de retenção própria
  -> parser estrito
  -> ConversationSafetyReplyPolicy
  -> ConversationStateUpdatePolicy
  -> estado com TTL
  -> usage + conclusão do ledger
- -> captura opcional de Humor/Sono com a mensagem ainda em memória
+ -> agendamento opcional de Humor/Sono com a mensagem ainda em memória, antes do retorno HTTP
 ```
 
 `conversation_states` contém somente:
@@ -38,13 +38,24 @@ mensagem atual em memória
 - intenção da última resposta;
 - revisão e timestamps/TTL.
 
-O estado não aceita rótulo clínico, diagnóstico, padrão, Insight ou trecho copiado. É lido/escrito apenas quando personalização, memória e storage sensível estão permitidos. Revogação apaga o estado da conversa. O padrão de TTL é 24 horas e é configurável.
+O estado não aceita rótulo clínico, diagnóstico, padrão, Insight ou trecho copiado. É lido/escrito
+apenas quando personalização, memória e storage sensível estão permitidos. Revogar memory ou storage
+sensível no update de perfil purga todos os states; revogar apenas personalization não aciona esse
+purge global, embora o chat bloqueie nova leitura/escrita e apague o state da conversa processada. A
+fonte de consentimento é salva antes do cleanup, então falha de purge requer reconciliação. O padrão
+de TTL é 24 horas e é configurável.
 
 `conversation_exchange_ledgers` usa chave única por usuário/conversa/mensagem fonte, HMAC SHA-256 com secret de finalidade, claim id, lease, status, risco/escopo, contagem de tokens e TTL. Não contém pergunta nem resposta. Reuso com outro HMAC é conflito; claim ativa sinaliza processamento; lease vencida pode ser retomada. Como a resposta não é armazenada, replay concluído retorna `MESSAGE_ALREADY_PROCESSED` em vez de reproduzir conteúdo.
 
 O contrato de chat substitui `profileUpdate` por `conversationStateUpdate`. O modelo propõe um snapshot; parser, safety policy, state policy, entidade e repository decidem. Uma conversa isolada não cria padrão longitudinal.
 
 A citação literal do extractor de Humor/Sono existe somente durante o grounding da mensagem atual. Persistência usa `evidenceFingerprint` HMAC; a API pública não expõe texto nem fingerprint.
+
+A captura revalida consentimento depois do provider e antes das mutações, mas `canWrite()` e o write
+Mongo não são atômicos. Esse TOCTOU e a ausência de purge automático de observations por mudança de
+preferência bloqueiam auto-persistência; o TTL de `ConversationState` não resolve essa corrida.
+Além disso, `User` não tem revision/CAS e o purge de state não possui marker/retry durável, podendo
+deixar state físico após falha ou reativá-lo depois de reconsentimento.
 
 `ConversationSafetyReplyPolicy` é defesa determinística além do prompt:
 

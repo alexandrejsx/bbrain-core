@@ -1,6 +1,6 @@
 # ADR-0005 — Contexto privacy-first e telemetria sanitizada
 
-- Status: Proposta
+- Status: Parcialmente implementada
 - Data: 2026-07-20
 - Escopo: contexto, memória, providers, logs, métricas e auditoria
 
@@ -8,11 +8,25 @@
 
 O perfil já contém preferências de privacidade, mas o builder de contexto e a persistência reflexiva atuais não as aplicam como gates. Logs podem incluir erro controlado por provider, e o fluxo de recuperação de senha permite registrar código quando email está desabilitado. Não há correlação, tracing, métricas por tarefa/versão nem audit trail próprio para leitura e mutação de dados sensíveis.
 
+Esse parágrafo registra o contexto de 20/07. Depois dele, context gating e redaction de e-mail foram
+implementados e existe telemetria parcial; tracing, correlação, metrics backend e audit trail seguem
+ausentes.
+
 ## Decisão
 
-Aplicar `PrivacyPolicy` antes da seleção de contexto, chamada externa e persistência. O builder recebe uma autorização tipada e monta o menor contexto necessário em camadas: regras do produto, estado da conversa, fatos consentidos pertinentes e evidence pack específico da tarefa. `false` ou preferência ausente falha fechada para memória/derivação nova. Revogação impede novas leituras/escritas e aciona o processo de retenção/deleção definido.
+Aplicar `PrivacyPolicy` antes da seleção de contexto, chamada externa e persistência. O builder recebe
+uma autorização tipada e monta o menor contexto necessário. `false` ou preferência ausente falha
+fechada para memória/derivação nova. No slice, revogar memory/storage purga `ConversationState`;
+revogar personalization isoladamente não aciona o purge global, e preferences não apagam
+observations existentes. A checagem de captura e o write Mongo ainda têm TOCTOU; `User` não tem
+revision/CAS e purge não tem marker/retry durável.
 
-Conteúdo de usuário, diário, emoção, sono, prompts montados, outputs brutos, tokens de autenticação, códigos de reset e trechos recuperados não entram em logs por padrão. Telemetria usa allowlist e identificadores opacos: tarefa, versões, provider/modelo, duração, contagem de tokens, estado do schema, classe de erro, retry, cache, decisão de policy e flags. Hashes/fingerprints devem ser não reversíveis e não reutilizados entre finalidades sem necessidade.
+Conteúdo de usuário, emoção, sono, prompts montados, outputs brutos, tokens de autenticação,
+códigos de reset e trechos recuperados não entram em logs por padrão. A telemetria de captura
+implementada inclui capability/status, provider/modelo/versões, duração, tokens, fallback, classe de
+falha, contagens e reason codes. Identificadores opacos de execução/correlação, versão de policy,
+retry, cache e custo ainda pertencem ao alvo. Hashes/fingerprints não são reutilizados entre
+finalidades.
 
 Um audit trail separado registra quem/qual serviço leu, alterou, exportou ou excluiu dado sensível, com finalidade e resultado, sem copiar o conteúdo. Métricas e traces têm correlação por `requestId`/`executionId` e retenção menor que dados de produto. Dados enviados a provider respeitam minimização, região/controles contratuais disponíveis e configuração sem treino/retenção quando aplicável.
 

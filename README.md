@@ -17,11 +17,13 @@ bbrain-core/
 - [AGENTS.md](./AGENTS.md): diretrizes globais de engenharia, privacidade e fronteiras.
 - [BUSINESS_RULES.md](./BUSINESS_RULES.md): regras normativas de produto.
 - [Arquitetura de IA](./docs/ai-architecture/README.md): estado auditado, arquitetura-alvo, ADRs, migração e implementação incremental.
-- [Relatório da implementação](./docs/ai-architecture/implementation-report.md): slice de conversa, Humor/Sono, Insights e seus limites.
+- [Relatório operacional de 22/07/2026](./docs/ai-architecture/operational-validation-report.md): baseline, rastreabilidade, Mongo real, providers, evals, validações e bloqueadores atuais.
+- [Sistema de IA explicado](./docs/ai-architecture/project-ai-system-explained.md): visão técnica e de produto do fluxo completo, harness, memória, segurança e limites.
+- [Relatório da implementação de 20/07/2026](./docs/ai-architecture/implementation-report.md): snapshot histórico do slice de conversa, Humor/Sono e Insights.
 
 O slice atual mantém o chat síncrono sem criar arquivo de transcrições. A API usa somente um estado conversacional estruturado, consentido e temporário (`conversation_states`) para continuidade; o estado expira por TTL e não aceita diagnóstico, padrão ou cópia literal. Idempotência usa um ledger técnico com HMAC (`conversation_exchange_ledgers`), sem pergunta ou resposta. Replays concluídos retornam conflito estável porque a resposta não é guardada.
 
-A captura pós-resposta de Humor/Sono valida a citação apenas em memória e persiste uma impressão HMAC, nunca o trecho literal. Execução e persistência são separadas: `AI_OBSERVATION_EXTRACTION_ENABLED` habilita shadow; writes exigem também `AI_OBSERVATION_EXTRACTION_PERSIST_ENABLED=true`. Ambas começam em `false`.
+A captura pós-resposta de Humor/Sono valida a citação apenas em memória e persiste uma impressão HMAC, nunca o trecho literal. Observações válidas são persistidas quando há consentimento e ownership aplicáveis.
 
 Insights possui autorização Pro no backend e resposta honesta de dados insuficientes; Recursos/RAG e geração longitudinal de Insights permanecem etapas futuras.
 
@@ -144,4 +146,4 @@ pnpm run lint
 pnpm build
 ```
 
-Não habilite persistência automática de dados sensíveis sem evals de provider, integração Mongo, revisão de privacidade e plano de rollback.
+Não habilite persistência automática de dados sensíveis enquanto os bloqueadores do relatório operacional estiverem abertos. Nenhuma flag de produção ou deploy foi alterado nesta validação.

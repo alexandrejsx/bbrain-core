@@ -1,12 +1,17 @@
 # Estratégia de dados de Humor e Sono
 
-## Estado do slice em 20 de julho de 2026
+## Estado do slice em 22 de julho de 2026
 
 A implementação escolheu um aggregate unificado `WellbeingObservation` e uma coleção aditiva `wellbeing_observations`. Os três `kind` atuais são `mood_event`, `mood_daily_summary` e `sleep_record`; um relato de período de sono é um `sleep_record` com referência temporal `period`, sem materializar noites inexistentes. As interfaces mais detalhadas abaixo continuam sendo vocabulário conceitual/alvo e não devem ser confundidas com coleções já disponíveis.
 
 O documento corrente contém `provenance_history`, `revision_history`, `revision` e o estado canônico. O histórico embutido foi escolhido para o slice por simplicidade e é limitado a 500 revisões; ao atingir o limite, novas mutações falham com indicação de migração em vez de apagar história. Uma coleção append-only passa a ser o próximo passo quando esse limite, auditoria independente ou crescimento de documento se tornarem relevantes. A decisão aplicada está em [ADR-0006](./adr/0006-unified-wellbeing-observations-and-stable-projection.md).
 
-A projeção derivada de Humor usa um slot estável por usuário/dia (`daily-mood-projector.v2`), no mínimo dois eventos, no máximo 12 descritores e 200 fontes. Ela registra ids e revisões das fontes, é atualizada no próprio aggregate e mantém as versões anteriores no histórico; o read path oculta um derivado `current` se as revisões não corresponderem. A listagem Mongo atual é deliberadamente limitada a 500 observações, o que ainda exige paginação/reconciliação antes de escala.
+A projeção derivada de Humor usa um slot estável por usuário/dia (`daily-mood-projector.v2`), no
+máximo 12 descritores e 200 fontes. A eligibility não usa quantidade isolada: exige ao menos duas
+fontes **e** diversidade de sinal emocional ou âncora temporal. Ela registra ids e revisões das
+fontes, mantém versões anteriores no histórico e o read path oculta um derivado `current` se as
+revisões não corresponderem. A listagem Mongo é limitada a 500 observações, o que ainda exige
+paginação/reconciliação antes de escala.
 
 ## Decisão central
 
@@ -19,7 +24,7 @@ MoodEvent                   evidência emocional primária
 SleepRecord                 uma noite/momento específico, parcial
 SleepPeriodStatement        relato agregado de período, sem fabricar noites
 DailyMoodSummary            projeção derivada ou resumo explícito/manual
-RecordRevision              correção, edição, supersession ou tombstone
+RecordRevision              correção, edição ou supersession enquanto o registro existe
 EvidenceReference           ligação à mensagem/ação de origem
 ```
 
@@ -123,7 +128,12 @@ interface SleepRecord {
   id: string;
   userId: string;
   temporal: TemporalReference;
-  durationMinutes?: { value: number; precision: Precision };
+  durationMinutes?: { value: number; precision: 'exact' | 'approximate' };
+  durationMinutesRange?: {
+    min: number;
+    max: number;
+    precision: 'exact' | 'approximate';
+  };
   bedtime?: { localTime: string; precision: Precision };
   wakeTime?: { localTime: string; precision: Precision };
   quality?: { value: string; precision: Precision; explicitlyReported: true };
@@ -144,7 +154,9 @@ interface SleepRecord {
 Invariantes:
 
 - Nenhum dos campos clínico-descritivos é obrigatório isoladamente; exige-se apenas uma afirmação de sono válida e evidência.
-- `durationMinutes` preserva `approximate/range`; “umas cinco horas” não vira exato.
+- `durationMinutes` preserva `approximate`; `durationMinutesRange` preserva mínimo/máximo e é
+  mutuamente exclusivo com duração pontual. Backend/golden passou para 360–420 e o frontend
+  tipa/exibe/edita os limites.
 - Bedtime, wake time, awakenings, quality e waking feeling permanecem ausentes se não mencionados.
 - `specific_night` pode ter `localDate` sem timestamps exatos.
 - Timezone vem do perfil e é registrado junto à resolução; mudança posterior de timezone não reinterpreta silenciosamente o passado.
@@ -171,6 +183,10 @@ interface SleepPeriodStatement {
 ```
 
 “Tenho dormido mal nas últimas semanas” cria no máximo um statement de período. Ele não é materializado como 14/21 noites, não entra em média de duração e não preenche dias ausentes.
+
+No aggregate implementado, o texto livre `periodDescription`/expressão original proposto pelo
+provider é descartado antes do domínio. A referência temporal persiste apenas o descriptor canônico
+`ongoing_period` e limites de data sustentados, evitando transformar o campo em mini-transcrição.
 
 ## DailyMoodSummary
 
@@ -204,7 +220,9 @@ manual_override
 ```
 
 - Sem evidência suficiente: `insufficient_data`, sem label/score fabricado.
-- Dois momentos diferentes podem resultar em `mixed`/mudança, nunca média neutra automática.
+- Múltiplas fontes só podem gerar derivado quando também houver diversidade de sinal/âncora;
+  quantidade isolada não comprova coverage. Dois momentos diferentes podem representar mudança,
+  nunca média neutra automática.
 - Um evento isolado normalmente tem coverage `point_in_time` ou `partial_day`, ainda que sua extração tenha alta confiança.
 - Resumo manual não destrói eventos; ele apenas prevalece na apresentação.
 
@@ -246,7 +264,10 @@ DeleteSleepRecord(recordId, expectedRevision)
 CreateManualSleepRecord(...)
 ```
 
-Um tombstone preserva que a evidência foi removida sem manter o conteúdo além da retenção permitida. APIs nunca permitem selecionar outro `userId`; ownership deriva do JWT.
+No slice aplicado, exclusão explícita remove o documento corrente para não reter conteúdo sensível
+indefinidamente. A trilha embutida existe somente enquanto o registro existe. Uma auditoria futura
+sem conteúdo pode registrar ação/id/revision, mas não funciona como tombstone do valor removido.
+APIs nunca permitem selecionar outro `userId`; ownership deriva do JWT.
 
 ## Correções conversacionais
 
@@ -286,16 +307,22 @@ O handler é idempotente. Até haver infraestrutura durável, o read path també
 ## Workflow de extração
 
 ```text
-1. persistir a troca conversacional idempotente e responder ao usuário
+1. concluir ledger/usage sem transcrição e produzir o reply
 2. aplicar feature/privacy/account policy antes de chamar o extractor
-3. serializar captura por usuário no processo atual
-4. executar extração estruturada com primary e no máximo um fallback
-5. validar JSON Schema, parser estrito e regras de domínio
-6. reaplicar privacy/account policy depois da chamada externa
-7. deduplicar candidates e reservar o slot idempotente na persistência
-8. criar/corrigir a observação com proveniência e contabilizar tokens auxiliares
-9. invalidar e reconstruir a projeção diária quando aplicável
+3. agendar a captura local antes do retorno HTTP, sem aguardar extractor/parser/write
+4. serializar captura por usuário no processo atual
+5. executar uma tentativa primária e no máximo um fallback para falha transitória permitida
+6. validar JSON Schema, parser estrito e regras de domínio
+7. reaplicar privacy/account policy depois da chamada externa e antes das mutações
+8. deduplicar candidates e reservar o slot idempotente na persistência
+9. criar/corrigir a observação com proveniência e contabilizar tokens auxiliares
+10. invalidar e reconstruir a projeção diária quando aplicável
 ```
+
+A etapa 7 reduz a corrida de revogação, mas `canWrite()` e o write Mongo não são atômicos. Esse
+TOCTOU, o purge de observations por mudança de preferência e a coordenação entre réplicas são
+bloqueadores de auto-persistência. `User` também não tem revision/CAS e o purge não tem marker/retry
+durável.
 
 Chave inicial:
 
@@ -312,7 +339,8 @@ O hash é identificador técnico, não substitui criptografia nem torna conteúd
 - nenhuma coleção vetorial pessoal;
 - `ai_executions`, inbox/outbox e fila durável permanecem futuras.
 
-Índices iniciais, implantados por migração explícita:
+Índices iniciais declarados pelo schema Mongoose e conferidos no MongoDB local em 22/07/2026; ainda
+não existe migration ledger para promover essa configuração em outro ambiente:
 
 ```text
 unique(user_id, idempotency_key)
@@ -337,15 +365,23 @@ provenance disponível ao usuário em linguagem simples
 stale/processing state
 ```
 
-Campos novos devem ser opcionais nos contratos frontend durante rollout. O backend suporta CRUD e provenance mesmo quando o layout atual não consegue exibir todos os detalhes; nenhuma nova página/CSS é exigida por esta arquitetura.
+Campos novos devem ser opcionais nos contratos frontend durante compatibilidade de versões. O frontend atual distingue
+origem/revision e oferece criação, edição e exclusão nas páginas existentes, com tratamento de 409 e
+replay, sem nova página/CSS. Nem todo detalhe técnico de provenance precisa ser exposto.
 
 ## Retenção e exclusão
 
-- Exclusão de conta inclui todos os records, revisions permitidas, summaries e executions vinculados; billing segue policy legal de retenção/anonymização separada.
+- Exclusão de conta inclui records, revisions embutidas e summaries. Não existem `ai_executions`
+  persistidas hoje; quando existirem, entrarão no inventário de retenção. Billing segue policy legal
+  separada.
 - Exclusão de conta bloqueia e drena capturas locais antes de remover `wellbeing_observations`; coordenação distribuída entre réplicas ainda requer fila/lease durável.
-- Exclusão de mensagem fonte deve invalidar/excluir derivados, conforme escolha de produto e consentimento; esse vínculo ainda não tem orchestration completa.
+- O chat não persiste mensagem fonte. Se uma futura API representar revogação da evidência pelo
+  `sourceMessageId` técnico, ela deverá invalidar/excluir derivados sem tentar recuperar texto; essa
+  orchestration ainda não existe.
 - Samples para eval não são copiados automaticamente do produto; exigem pipeline separado, minimizado e auditado.
 - Proveniência não justifica retenção indefinida do conteúdo fonte.
+- O mapper atual não devolve `evidenceQuote`, mas possível campo literal legacy ainda pode existir
+  at-rest. Remoção requer migration scoped/auditável; não ocorreu cleanup físico nesta etapa.
 
 ## Critérios de aceite do slice
 
@@ -359,4 +395,8 @@ Campos novos devem ser opcionais nos contratos frontend durante rollout. O backe
 - Alteração invalida todo derivado referenciado.
 - Provenance e versões são recuperáveis, mas conteúdo não aparece em logs.
 
-Os critérios acima são cobertos por testes determinísticos. Não houve chamada a provider real, avaliação humana, integration test Mongo nem canary; por isso a captura automática continua desligada por padrão.
+Os critérios acima têm cobertura determinística, mas o status final de cada suíte, provider real e
+Mongo opt-in fica exclusivamente no
+[documentação de arquitetura](./README.md). A avaliação
+humana, acesso antecipado ou produção; captura automática continua desligada por padrão. Range está validado no
+backend e no fluxo frontend focado.
