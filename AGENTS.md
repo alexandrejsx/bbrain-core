@@ -1,239 +1,50 @@
 # BBrain Core
 
-Repositório central do ecossistema BBrain.
+Diretrizes globais do ecossistema BBrain. O frontend (`bbrain`) e o backend (`bbrain-api`) são projetos independentes e possuem instruções específicas próprias.
 
-Este documento define as diretrizes globais de todo o ecossistema BBrain.
+## Produto
 
----
+O BBrain apoia acompanhamento emocional, autoconhecimento, rotina e desenvolvimento pessoal assistidos por IA. A experiência deve ser acolhedora, clara, segura, privada, moderna, humana, não clínica, não alarmista e não infantilizada.
 
-# 1) Escopo global
+O produto não é terapeuta, psicólogo, psiquiatra, médico, ferramenta de diagnóstico ou substituto de acompanhamento profissional. A IA não diagnostica, prescreve, ajusta medicação, promete cura, confirma autorrotulação clínica nem incentiva dependência emocional.
 
-O `bbrain-core` é o repositório central/orquestrador do ecossistema BBrain.
+## Princípios
 
-Pode conter scripts, automações, documentação e diretrizes globais.
+- simplicidade, legibilidade, manutenção, segurança e consistência;
+- privacidade por padrão, menor privilégio e minimização de dados;
+- frontend como referência do contrato e da experiência atual;
+- backend como autoridade de autenticação, autorização, regras, persistência, IA e integrações sensíveis;
+- `camelCase` na aplicação e `snake_case` em documentos MongoDB, com conversão localizada nos repositories/mappers;
+- `pt-BR`, `en-US` e `es-ES`, com `pt-BR` como fallback;
+- código morto e abstrações sem uso são removidos, não preservados por precaução.
 
-Os projetos `bbrain` e `bbrain-api` continuam sendo projetos independentes, com histórico de commits, dependências e AGENTS específicos.
+## Arquitetura atual do backend
 
----
+O backend usa Clean Architecture pragmática, organizada principalmente por feature. Conceitos de domínio só existem quando protegem uma regra real; não há DDD cerimonial, interfaces para tudo ou camadas antecipadas.
 
-# 2) Visão de produto
+Existe um único agente: `ConversationAgent`. Memory, Current Context, Pattern, Mood e Sleep são dados ou operações especializadas, não agentes. O `ContextBuilder` é o único lugar que monta o contexto conversacional. Extrações de IA usam structured output, validação de schema, política de consentimento e persistência separada.
 
-O BBrain é uma plataforma de acompanhamento emocional, autoconhecimento, rotina e desenvolvimento pessoal assistida por IA.
+OpenAI e Gemini ficam atrás de um único provider configurável. A seleção de modelos usa somente os papéis `FAST`, `CONVERSATION` e `REASONING`. MongoDB é a persistência.
 
-A experiência deve ser:
+A conversa completa não é memória permanente. Quando há consentimento, apenas uma janela recente pequena e temporária é mantida para continuidade imediata; informação antiga útil é consolidada em Current Context, Memory, Pattern, Mood ou Sleep. Prompts, mensagens completas e dados emocionais não entram em logs de produção.
 
-- acolhedora
-- clara
-- segura
-- privada
-- moderna
-- humana
-- não clínica
-- não alarmista
-- não infantilizada
+Antes de adicionar um novo agente, camada arquitetural, framework, banco, pipeline ou abstração, deve existir uma necessidade funcional concreta no produto atual que justifique sua inclusão.
 
-O BBrain não deve se posicionar como terapeuta, psicólogo, psiquiatra, médico, ferramenta de diagnóstico ou substituto de acompanhamento profissional.
+## Dados e IA
 
----
+- diagnósticos entram no contexto apenas quando informados formalmente pelo próprio usuário;
+- ausência de dado não vira score, humor neutro ou noite de sono;
+- uma ocorrência não cria Pattern; recorrência exige múltiplas evidências independentes;
+- Mood e Sleep aceitam informação parcial e aproximada sem fabricar precisão;
+- extração automática requer consentimento válido, ownership, proveniência e revalidação antes do write;
+- `sourceEventId` suporta idempotência sem armazenar a frase original;
+- revogação e exclusão impedem novas escritas e removem dados aplicáveis;
 
-# 3) Estrutura do ecossistema
+## Fontes de verdade
 
-O repositório central agrupa projetos com responsabilidades distintas.
+1. `BUSINESS_RULES.md` para regras normativas do produto;
+2. código para o estado realmente implementado;
+3. `docs/ai-architecture/README.md` para o fluxo técnico atual;
+4. `bbrain/AGENTS.md` e `bbrain-api/AGENTS.md` para regras específicas.
 
-## bbrain
-
-Responsável por interface, experiência e fluxos de uso:
-
-- UI e navegação
-- formulários
-- dashboard
-- chat
-- sono
-- humor
-- rotina
-- insights
-- recursos
-
-Diretrizes específicas em `bbrain/AGENTS.md`.
-
-## bbrain-api
-
-Responsável por backend e regras de produto:
-
-- autenticação
-- regras de negócio
-- persistência
-- integrações externas
-- IA
-- processamento sensível
-
-Diretrizes específicas em `bbrain-api/AGENTS.md`.
-
----
-
-# 4) Princípios globais
-
-Toda implementação deve priorizar:
-
-1. Simplicidade
-2. Legibilidade
-3. Manutenibilidade
-4. Segurança
-5. Consistência
-
-Evitar:
-
-- complexidade desnecessária
-- overengineering
-- dependências sem justificativa
-
----
-
-# 5) Arquitetura e fronteiras
-
-Cada projeto mantém autonomia técnica e pode evoluir de forma independente.
-
-- O frontend deve focar experiência do usuário, apresentação, formulários, navegação, acessibilidade e consumo de APIs.
-- O backend deve ficar com autenticação, regras de negócio, persistência, integrações sensíveis, IA, pagamentos, segurança e controle de acesso.
-- O frontend não deve acessar diretamente provedores de IA, gateways de pagamento, banco de dados ou outros serviços sensíveis.
-
-No backend:
-
-- domínio, entidades, value objects, DTOs e casos de uso em `camelCase`
-- esquemas, documentos, filtros e objetos persistidos em `snake_case`
-- conversões centralizadas em mappers da infraestrutura
-- não espalhar conversão manualmente em controllers, serviços ou casos de uso
-
----
-
-# 6) i18n global
-
-O ecossistema deve suportar internacionalização desde o início.
-
-Idiomas atuais:
-
-- `pt-BR`
-- `en-US`
-- `es-ES`
-
-Diretrizes:
-
-- textos visíveis não devem ficar soltos em componentes sem controle;
-- adicionar idioma novo deve exigir baixo esforço;
-- idioma preferido deve ficar persistido no perfil;
-- `pt-BR` é fallback padrão;
-- preservar tom acolhedor/seguro/não clínico em todas as línguas;
-- termos sensíveis de saúde mental requerem tradução e revisão cuidadosas;
-- evitar tradução automática para mensagens críticas, de segurança, privacidade, crise ou pagamento.
-
----
-
-# 7) Segurança e privacidade
-
-Dados emocionais, humor, sono, rotina, perfil, diagnósticos formais informados pelo usuário e preferências pessoais são sensíveis.
-
-A implementação deve priorizar:
-
-- privacidade por padrão
-- menor privilégio
-- não exposição de secrets
-- não exposição de dados sensíveis em logs
-- respostas de erro seguras
-- controle do usuário sobre seus dados
-- separação clara entre dados públicos, privados e sensíveis
-
----
-
-# 8) IA e limites de escopo
-
-Toda funcionalidade de IA deve respeitar os limites do produto:
-
-- não diagnosticar
-- não prescrever
-- não ajustar medicação
-- não prometer cura
-- não substituir profissionais
-- não fazer interpretações clínicas profundas
-- não incentivar dependência emocional do agente
-- responder apenas no escopo do BBrain
-
-A IA atua como apoio reflexivo, organização emocional e autoconhecimento.
-
----
-
-# 9) Planos, pagamentos e recursos premium
-
-Podem existir recursos gratuitos e pagos.
-
-Integrações e cobrança devem ficar no backend.
-
-Recursos premium podem incluir, por exemplo:
-
-- análises mais profundas
-- plano de apoio
-- relatórios exportáveis
-- acompanhamento contínuo
-
-Evitar amarrar regras conceituais a provedores específicos no AGENTS global.
-
----
-
-# 10) Fontes de verdade e hierarquia
-
-1. `bbrain-core/AGENTS.md` define regras globais.
-2. `bbrain/AGENTS.md` define regras específicas de frontend.
-3. `bbrain-api/AGENTS.md` define regras específicas de backend.
-4. `DESIGN.md` define regras de design visual por projeto.
-
-Em caso de conflito:
-
-- preservar segurança, privacidade, clareza arquitetural e coerência de produto.
-
----
-
-# 11) Privacidade e segurança por desenho
-
-Todas as funcionalidades devem considerar privacidade desde o início do desenho, e qualquer implementação deve reforçar transparência, segurança e confiança do usuário.
-
----
-
-# 12) IA, Humor, Sono e Insights
-
-Para fluxos de IA e dados de bem-estar, consulte também `docs/ai-architecture/` e mantenha a documentação atualizada quando contratos, prompts, schemas, eventos, privacidade ou retenção mudarem.
-
-- outputs de IA são sugestões não confiáveis até parser, policy e domínio aprovarem;
-- somente backend pode chamar providers ou persistir derivados;
-- fatos de Humor/Sono devem preservar fonte, precisão temporal, revisão e controle do usuário;
-- ausência de dado não é neutralidade, score ou noite de sono;
-- dados de terceiros, hipóteses, desejos, ficção e negação não devem criar fatos pessoais;
-- resumo diário de Humor é derivado e não substitui evento primário;
-- edição, correção e exclusão precisam invalidar derivados relevantes;
-- histórico básico não é premium; Insights premium exige autorização no backend;
-- Recursos/RAG nunca atualizam perfil ou memória pessoal por conta própria.
-
-A extração automática faz parte do fluxo normal quando há consentimento válido. Parser, policy de domínio, ownership e proveniência continuam obrigatórios antes de qualquer persistência.
-
----
-
-# 13) Fontes normativas e estado da implementação
-
-`BUSINESS_RULES.md` é a fonte normativa de produto. O código mostra o estado implementado; `README.md` explica operação; documentos em `docs/ai-architecture/` registram decisões e limitações.
-
-Quando houver conflito, preserve limites clínicos, segurança, privacidade e autorização. Não declare como implementado aquilo que esteja somente planejado ou documentado.
-
----
-
-# 14) Estado de conversa e retenção
-
-O fluxo ativo de conversa não deve ler nem escrever transcrições literais. Para continuidade, use somente `ConversationState` estruturado, minimizado, consentido e com TTL.
-
-- não persistir mensagem do usuário nem resposta do BBrain;
-- não usar `current_context_summary` como substituto de transcrição;
-- não guardar rótulo clínico, diagnóstico, padrão ou Insight no estado efêmero;
-- validar e rejeitar trechos copiados antes do repository;
-- usar HMAC separado por finalidade para idempotência/evidência, com secret fora do código;
-- revogação de memória ou storage sensível deve impedir leitura/escrita e apagar o estado ativo;
-- schema/repository de `conversation_messages` não existem mais e não podem ser reintroduzidos no caminho de chat;
-- uma única conversa nunca autoriza criar padrão longitudinal.
-
-Autorrotulação clínica e exclusividade emocional exigem defesa fora do prompt: o modelo não pode confirmar o rótulo, inventar sintomas nem dizer que ele e o usuário estão “sozinhos nessa”. Impulsividade difícil de controlar somada à falta de apoio humano exige verificação direta de segurança imediata.
+Não declarar como implementado algo apenas planejado. Em conflitos, preservar limites clínicos, segurança, privacidade, autorização e coerência do produto.
