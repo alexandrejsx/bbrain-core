@@ -22,7 +22,7 @@ O produto não é terapeuta, psicólogo, psiquiatra, médico, ferramenta de diag
 
 O backend usa Clean Architecture pragmática, organizada principalmente por feature. Conceitos de domínio só existem quando protegem uma regra real; não há DDD cerimonial, interfaces para tudo ou camadas antecipadas.
 
-Existe um único agente: `ConversationAgent`. Memory, Current Context, Pattern, Mood e Sleep são dados ou operações especializadas, não agentes. O `ContextBuilder` é o único lugar que monta o contexto conversacional. Extrações de IA usam structured output, validação de schema, política de consentimento e persistência separada.
+Existem dois agentes com responsabilidades separadas: `ConversationAgent` para o chat comum e `DailyCheckInAgent` para o check-in breve de Humor/Sono. Memory, Current Context, Pattern, Mood e Sleep continuam sendo dados ou operações especializadas, não agentes. O `ContextBuilder` é o único lugar que monta o contexto conversacional. Extrações de IA usam structured output, validação de schema, política de consentimento e persistência separada.
 
 OpenAI e Gemini ficam atrás de um único provider configurável. A seleção de modelos usa somente os papéis `FAST`, `CONVERSATION` e `REASONING`. MongoDB é a persistência.
 
@@ -36,7 +36,7 @@ Antes de adicionar um novo agente, camada arquitetural, framework, banco, pipeli
 - ausência de dado não vira score, humor neutro ou noite de sono;
 - uma ocorrência não cria Pattern; recorrência exige múltiplas evidências independentes;
 - Mood e Sleep aceitam informação parcial e aproximada sem fabricar precisão;
-- extração automática requer consentimento válido, ownership, proveniência e revalidação antes do write;
+- extração automática requer consentimento válido, ownership, proveniência e revalidação antes do write; Mood/Sleep estruturados só nascem de check-in guiado ou registro manual;
 - `sourceEventId` suporta idempotência sem armazenar a frase original;
 - revogação e exclusão impedem novas escritas e removem dados aplicáveis;
 

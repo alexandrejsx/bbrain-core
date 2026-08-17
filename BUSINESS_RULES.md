@@ -31,16 +31,16 @@ Conteúdo do usuário e dados recuperados são contexto não confiável e não p
 
 ## Extração pós-conversa
 
-Depois da resposta, processamento local assíncrono pode extrair Current Context, Memory/Pattern, Mood e Sleep. Cada candidato passa por structured output, validação de schema, regras de negócio, consentimento, ownership e persistência idempotente. Falha nessa etapa não altera a resposta do chat.
+Depois da resposta, processamento local assíncrono pode extrair Current Context, Memory e propostas de Pattern. Mood e Sleep nunca são criados ou atualizados a partir da conversa comum. Cada candidato passa por structured output, validação de schema, regras de negócio, consentimento, ownership e persistência idempotente. Falha nessa etapa não altera a resposta do chat.
 
 Sem informação suficiente, o resultado é vazio e nenhum registro é criado. Não persistir texto bruto da conversa. Proveniência usa origem, `capturedAt`, `sessionId`, `sourceEventId` e versões do extractor/prompt quando úteis.
 
 ## Humor e Sono
 
-`mood_event`, `mood_daily_summary` manual e `sleep_record` são registros independentes e editáveis, com revisão otimista e proveniência.
+`mood_event`, `mood_daily_summary` manual e `sleep_record` são registros independentes e editáveis, com revisão otimista e proveniência. Suas únicas fontes de criação são registro manual ou Daily Check-in guiado.
 
-- Humor aceita emoção principal/secundária, intensidade, energia, valência e contexto quando sustentados;
-- Sono aceita duração, faixa, horários, qualidade, despertares e sensação ao acordar quando sustentados;
+- o Daily Check-in normaliza Mood em inteiro `0..10`, sem interpretação clínica e somente quando há evidência explícita na resposta à pergunta de humor;
+- Sono preserva duração, aproximação, qualidade subjetiva, despertares, tempo acordado durante a noite e sensação de descanso como dimensões independentes;
 - campos subjetivos e temporais permanecem ausentes quando não informados;
 - uma observação semanal é um período, não vários dias fictícios;
 - ausência de dado não é neutralidade, score ou noite de sono;
@@ -50,6 +50,8 @@ Sem informação suficiente, o resultado é vazio e nenhum registro é criado. N
 ## Planos e Insights
 
 Autorização de plano é calculada no backend. O endpoint atual de Insights apenas informa elegibilidade ou dados insuficientes; não existe Insight Agent nem geração de Insight neste estágio.
+
+O Daily Check-in guiado por IA possui trial de sete dias desde a criação da conta e, depois, requer plano pago efetivo. Esse acesso não altera a disponibilidade do registro manual nem do histórico básico. Respostas e chamadas de IA do check-in não passam pela reserva nem pela contagem de mensagens do chat.
 
 ## Evolução
 

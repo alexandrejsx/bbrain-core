@@ -21,9 +21,9 @@ bbrain-core/
 - [Sistema de IA explicado](./docs/ai-architecture/project-ai-system-explained.md): visão técnica e de produto do fluxo completo, harness, memória, segurança e limites.
 - [Relatório da implementação de 20/07/2026](./docs/ai-architecture/implementation-report.md): snapshot histórico do slice de conversa, Humor/Sono e Insights.
 
-O slice atual mantém o chat síncrono sem criar arquivo de transcrições. A API usa somente um estado conversacional estruturado, consentido e temporário (`conversation_states`) para continuidade; o estado expira por TTL e não aceita diagnóstico, padrão ou cópia literal. Idempotência usa um ledger técnico com HMAC (`conversation_exchange_ledgers`), sem pergunta ou resposta. Replays concluídos retornam conflito estável porque a resposta não é guardada.
+O slice atual mantém o chat síncrono sem criar arquivo permanente de transcrições. A API usa uma janela recente pequena e temporária para continuidade e um ledger técnico com HMAC para idempotência, sem transformar conversa em memória permanente.
 
-A captura pós-resposta de Humor/Sono valida a citação apenas em memória e persiste uma impressão HMAC, nunca o trecho literal. Observações válidas são persistidas quando há consentimento e ownership aplicáveis.
+Humor e Sono estruturados são criados somente por registro manual ou pelo Daily Check-in guiado. O check-in usa um `DailyCheckInAgent` independente no papel `FAST`, possui draft estruturado por usuário/data, trial de sete dias e não consome mensagens do chat. O pós-processamento da conversa comum continua limitado a Current Context, Memory e Pattern.
 
 Insights possui autorização Pro no backend e resposta honesta de dados insuficientes; Recursos/RAG e geração longitudinal de Insights permanecem etapas futuras.
 
@@ -75,9 +75,9 @@ pnpm dev
 
 Este comando executa:
 
-* Frontend (`bbrain`)
-* Docker da API
-* Backend (`bbrain-api`)
+- Frontend (`bbrain`)
+- Docker da API
+- Backend (`bbrain-api`)
 
 ### Executar apenas o frontend
 

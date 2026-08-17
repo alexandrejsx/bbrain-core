@@ -10,7 +10,8 @@ bbrain-api/src/
     prompts/                 prompts centralizados
     providers/               OpenAI e Gemini
     safety/                  limites determinísticos da conversa
-    conversation-agent.ts    único agente
+    conversation-agent.ts    agente do chat comum
+    daily-check-in-agent.ts  agente breve de Humor/Sono (FAST)
     model-router.ts           FAST / CONVERSATION / REASONING
     post-conversation.extractor.ts
     structured-output.ts
@@ -23,7 +24,8 @@ bbrain-api/src/
     mood/                     domínio e coleção de humor
     sleep/                    domínio e coleção de sono
     users/                    perfil, consentimento e persistência do usuário
-    wellbeing/                API pública compatível de Humor/Sono
+    daily-check-in/           sessão, trial, orquestração e API próprias
+    wellbeing/                API pública manual de Humor/Sono
   infrastructure/
     database/mongodb/         usuários, uso e billing existentes
     payments/                 Stripe e Asaas
@@ -48,10 +50,24 @@ POST /chat/message
   → agendamento local best-effort
       extractor estruturado (papel FAST)
       revalidação de consentimento
-      Current Context / Memory e Pattern / Mood / Sleep
+      Current Context / Memory / Pattern
 ```
 
 O `ConversationAgent` não conhece MongoDB. O Context Builder não persiste. O extractor não persiste. Os providers não conhecem consentimento nem regras de domínio. Controllers não montam prompts.
+
+```text
+GET /daily-check-in/status
+POST /daily-check-in/start | /daily-check-in/dismiss | /daily-check-in/answer
+  → autenticação, consentimento e entitlement (trial de 7 dias ou plano pago)
+  → adiamento diário persistido no mesmo draft por usuário/data
+  → claim idempotente por usuário/data/request
+  → DailyCheckInAgent (papel FAST)
+  → structured output + confidence por campo
+  → validação e limite determinístico de até 5 perguntas
+  → Mood / Sleep nas coleções existentes
+```
+
+O check-in não usa `ConversationAgent`, endpoints de chat ou reserva de uso. Portanto não incrementa mensagens nem consome quota do chat. Seu draft persiste apenas o estado estruturado, a pergunta atual, o adiamento opcional do dia e identificadores técnicos; não existe transcript do check-in. A abertura automática pertence somente à Home; o Chat apenas pode consumir posteriormente o contexto estruturado concluído.
 
 ## Continuidade, Current Context e Memory
 
@@ -61,7 +77,9 @@ O `ConversationAgent` não conhece MongoDB. O Context Builder não persiste. O e
 
 ## Extração
 
-Uma única chamada estruturada sugere cinco resultados independentes: Current Context, Memory, Pattern, Mood e Sleep. Cada parte pode ser `null`. O JSON passa por validação estrutural e depois pelas regras de confiança, consentimento e domínio. Nenhum resultado livre é persistido diretamente.
+Uma única chamada pós-conversa sugere três resultados independentes: Current Context, Memory e Pattern. Cada parte pode ser `null`. Mood e Sleep foram removidos integralmente desse contrato.
+
+O `DailyCheckInAgent` possui schema próprio para Mood `0..10` e dimensões independentes de Sleep. Valores abaixo de `AI_EXTRACTION_MIN_CONFIDENCE` são descartados pela aplicação. O agente sugere a próxima pergunta, mas a aplicação impõe o limite e aceita dados parciais em vez de inventar campos.
 
 O scheduler usa `setImmediate` e mantém tarefas ativas por usuário apenas para permitir drain seguro na exclusão. Não há fila, Redis ou job framework.
 
@@ -76,9 +94,10 @@ O scheduler usa `setImmediate` e mantém tarefas ativas por usuário apenas para
 | `memories`              | Memory e Pattern consolidados               | sourceEvent único para Memory; chave de tópicos para Pattern |
 | `mood_records`          | eventos e resumos manuais de Humor          | request/sourceEvent idempotente; revisão                     |
 | `sleep_records`         | observações parciais de Sono                | request/sourceEvent idempotente; revisão                     |
+| `daily_check_ins`       | draft estruturado e coordenação diária      | unique user/data; request idempotente                        |
 | billing/usage           | assinatura, cobrança e limites              | regras próprias existentes                                   |
 
-Mood e Sleep expõem juntos o contrato existente de `/wellbeing-history/observations`, adequado a timeline, calendário, gráficos simples, edição e exclusão. Internamente permanecem em collections separadas e não dependem do chat depois de criados.
+Mood e Sleep expõem juntos o contrato existente de `/wellbeing-history/observations`, adequado a timeline, calendário, gráficos simples, edição e exclusão. Registros guiados usam proveniência `guided_checkin`; registro manual continua disponível em qualquer plano. O check-in concluído entra no `ContextBuilder` como contexto read-only do dia, carregado dos registros que permanecem como fonte de verdade.
 
 ## Providers e observabilidade
 
